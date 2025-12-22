@@ -30,7 +30,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Health check endpoint
-app.get('/health', async (req: Request, res: Response) => {
+app.get('/health', async (_req: Request, res: Response) => {
   try {
     // Test database connection
     await pool.query('SELECT 1');
@@ -55,7 +55,7 @@ app.get('/health', async (req: Request, res: Response) => {
 });
 
 // API routes will be added here
-app.use('/api/v1', (req: Request, res: Response) => {
+app.use('/api/v1', (_req: Request, res: Response) => {
   res.status(200).json({
     message: 'EloAR API v1',
     endpoints: {
@@ -79,7 +79,7 @@ app.use((req: Request, res: Response) => {
 });
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Error:', err);
   res.status(500).json({
     error: 'Internal Server Error',
