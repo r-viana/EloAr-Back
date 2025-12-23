@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { config } from './config/environment';
 import { pool } from './config/database';
+import routes from './routes';
 
 // Load environment variables
 dotenv.config();
@@ -54,21 +55,8 @@ app.get('/health', async (_req: Request, res: Response) => {
   }
 });
 
-// API routes will be added here
-app.use('/api/v1', (_req: Request, res: Response) => {
-  res.status(200).json({
-    message: 'EloAR API v1',
-    endpoints: {
-      health: '/health',
-      students: '/api/v1/students (coming soon)',
-      preferences: '/api/v1/preferences (coming soon)',
-      constraints: '/api/v1/constraints (coming soon)',
-      configurations: '/api/v1/configurations (coming soon)',
-      distributions: '/api/v1/distributions (coming soon)',
-      optimization: '/api/v1/optimization (coming soon)',
-    },
-  });
-});
+// Mount API routes
+app.use('/api/v1', routes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
