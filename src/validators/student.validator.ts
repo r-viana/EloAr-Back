@@ -105,6 +105,8 @@ export const studentQuerySchema = Joi.object({
   schoolYearId: Joi.number().integer().positive().optional(),
   gradeLevelId: Joi.number().integer().positive().optional(),
   search: Joi.string().trim().min(1).max(100).optional(),
+  gender: Joi.string().valid('M', 'F', 'O').optional(),
+  hasSpecialNeeds: Joi.boolean().optional(),
   limit: Joi.number().integer().min(1).max(500).optional().default(50),
   offset: Joi.number().integer().min(0).optional().default(0),
 });
