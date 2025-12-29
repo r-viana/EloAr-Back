@@ -9,6 +9,10 @@ import classRoutes from './class.routes';
 import schoolYearRoutes from './schoolYear.routes';
 import gradeLevelRoutes from './gradeLevel.routes';
 import importRoutes from './import.routes';
+import studentPreferenceRoutes from './studentPreference.routes';
+import studentConstraintRoutes from './studentConstraint.routes';
+import siblingRuleRoutes from './siblingRule.routes';
+import constraintTypeRoutes from './constraintType.routes';
 
 const router = Router();
 
@@ -18,6 +22,10 @@ router.use('/classes', classRoutes);
 router.use('/school-years', schoolYearRoutes);
 router.use('/grade-levels', gradeLevelRoutes);
 router.use('/import', importRoutes);
+router.use('/student-preferences', studentPreferenceRoutes);
+router.use('/student-constraints', studentConstraintRoutes);
+router.use('/sibling-rules', siblingRuleRoutes);
+router.use('/constraint-types', constraintTypeRoutes);
 
 // Health check endpoint
 router.get('/health', (_req, res) => {
