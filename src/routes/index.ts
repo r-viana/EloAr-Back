@@ -13,6 +13,7 @@ import studentPreferenceRoutes from './studentPreference.routes';
 import studentConstraintRoutes from './studentConstraint.routes';
 import siblingRuleRoutes from './siblingRule.routes';
 import constraintTypeRoutes from './constraintType.routes';
+import configurationRoutes from './configuration.routes';
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.use('/student-preferences', studentPreferenceRoutes);
 router.use('/student-constraints', studentConstraintRoutes);
 router.use('/sibling-rules', siblingRuleRoutes);
 router.use('/constraint-types', constraintTypeRoutes);
+router.use('/configurations', configurationRoutes);
 
 // Health check endpoint
 router.get('/health', (_req, res) => {
