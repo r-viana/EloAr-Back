@@ -14,6 +14,7 @@ import studentConstraintRoutes from './studentConstraint.routes';
 import siblingRuleRoutes from './siblingRule.routes';
 import constraintTypeRoutes from './constraintType.routes';
 import configurationRoutes from './configuration.routes';
+import distributionRoutes from './distribution.routes';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.use('/student-constraints', studentConstraintRoutes);
 router.use('/sibling-rules', siblingRuleRoutes);
 router.use('/constraint-types', constraintTypeRoutes);
 router.use('/configurations', configurationRoutes);
+router.use('/distributions', distributionRoutes);
 
 // Health check endpoint
 router.get('/health', (_req, res) => {
