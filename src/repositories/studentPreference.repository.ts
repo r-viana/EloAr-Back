@@ -251,6 +251,35 @@ export class StudentPreferenceRepository {
 
     return results;
   }
+
+  /**
+   * Get all students for a school year and grade level (for import matching)
+   */
+  async getAllStudentsForYearAndGrade(schoolYearId: number, gradeLevelId: number): Promise<any[]> {
+    const query = `
+      SELECT id, external_id as "externalId", full_name as "fullName"
+      FROM students
+      WHERE school_year_id = $1 AND grade_level_id = $2
+    `;
+
+    const result = await pool.query(query, [schoolYearId, gradeLevelId]);
+    return result.rows;
+  }
+
+  /**
+   * Delete all preferences for a school year and grade level
+   */
+  async deleteBySchoolYearAndGrade(schoolYearId: number, gradeLevelId: number): Promise<void> {
+    const query = `
+      DELETE FROM student_preferences
+      WHERE student_id IN (
+        SELECT id FROM students
+        WHERE school_year_id = $1 AND grade_level_id = $2
+      )
+    `;
+
+    await pool.query(query, [schoolYearId, gradeLevelId]);
+  }
 }
 
 export const studentPreferenceRepository = new StudentPreferenceRepository();

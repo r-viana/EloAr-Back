@@ -333,6 +333,232 @@ export class StudentPreferenceController {
       });
     }
   }
+
+  /**
+   * Validate CSV import of preferences
+   * POST /api/v1/student-preferences/import/validate
+   */
+  async validateImport(req: Request, res: Response): Promise<void> {
+    try {
+      const { csvData, schoolYearId, gradeLevelId } = req.body;
+
+      if (!csvData || !schoolYearId || !gradeLevelId) {
+        res.status(400).json({
+          success: false,
+          message: 'CSV data, schoolYearId e gradeLevelId são obrigatórios',
+        });
+        return;
+      }
+
+      const rows = csvData.trim().split('\n');
+      const errors: Array<{ row: number; field: string; message: string }> = [];
+      const validPreferences: any[] = [];
+
+      // Skip header
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i].trim();
+        if (!row) continue;
+
+        const columns = row.split(',').map((col: string) => col.trim());
+
+        if (columns.length < 3) {
+          errors.push({
+            row: i + 1,
+            field: 'general',
+            message: 'Linha incompleta. Esperado: aluno, alunoPreferido, prioridade',
+          });
+          continue;
+        }
+
+        const [studentIdentifier, preferredStudentIdentifier, priorityStr] = columns;
+
+        // Validate priority
+        const priority = parseInt(priorityStr);
+        if (isNaN(priority) || priority < 1 || priority > 3) {
+          errors.push({
+            row: i + 1,
+            field: 'prioridade',
+            message: 'Prioridade deve ser 1, 2 ou 3',
+          });
+          continue;
+        }
+
+        validPreferences.push({
+          studentIdentifier,
+          preferredStudentIdentifier,
+          priority,
+          row: i + 1,
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Validação concluída',
+        data: {
+          valid: errors.length === 0,
+          totalRows: rows.length - 1,
+          validRows: validPreferences.length,
+          errors,
+          preview: validPreferences.slice(0, 5),
+        },
+      });
+    } catch (error: any) {
+      console.error('Error validating import:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao validar importação',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Import preferences from CSV
+   * POST /api/v1/student-preferences/import
+   */
+  async import(req: Request, res: Response): Promise<void> {
+    try {
+      const { csvData, schoolYearId, gradeLevelId, replaceExisting } = req.body;
+
+      if (!csvData || !schoolYearId || !gradeLevelId) {
+        res.status(400).json({
+          success: false,
+          message: 'CSV data, schoolYearId e gradeLevelId são obrigatórios',
+        });
+        return;
+      }
+
+      const rows = csvData.trim().split('\n');
+      const errors: Array<{ row: number; field: string; message: string }> = [];
+      let successCount = 0;
+      let skippedCount = 0;
+
+      // Get all students for this school year and grade level
+      const students = await studentPreferenceRepository.getAllStudentsForYearAndGrade(
+        schoolYearId,
+        gradeLevelId
+      );
+
+      // Create lookup maps
+      const studentsByExternalId = new Map(
+        students.map((s: any) => [s.externalId?.toLowerCase(), s])
+      );
+      const studentsByName = new Map(
+        students.map((s: any) => [s.fullName?.toLowerCase(), s])
+      );
+
+      // If replacing existing, delete all preferences for this grade/year
+      if (replaceExisting) {
+        await studentPreferenceRepository.deleteBySchoolYearAndGrade(schoolYearId, gradeLevelId);
+      }
+
+      // Skip header
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i].trim();
+        if (!row) continue;
+
+        const columns = row.split(',').map((col: string) => col.trim());
+
+        if (columns.length < 3) {
+          errors.push({
+            row: i + 1,
+            field: 'general',
+            message: 'Linha incompleta',
+          });
+          continue;
+        }
+
+        const [studentIdentifier, preferredStudentIdentifier, priorityStr] = columns;
+        const priority = parseInt(priorityStr);
+
+        // Find student by external ID or name
+        let student = studentsByExternalId.get(studentIdentifier.toLowerCase());
+        if (!student) {
+          student = studentsByName.get(studentIdentifier.toLowerCase());
+        }
+
+        if (!student) {
+          errors.push({
+            row: i + 1,
+            field: 'aluno',
+            message: `Aluno não encontrado: ${studentIdentifier}`,
+          });
+          continue;
+        }
+
+        // Find preferred student
+        let preferredStudent = studentsByExternalId.get(preferredStudentIdentifier.toLowerCase());
+        if (!preferredStudent) {
+          preferredStudent = studentsByName.get(preferredStudentIdentifier.toLowerCase());
+        }
+
+        if (!preferredStudent) {
+          errors.push({
+            row: i + 1,
+            field: 'alunoPreferido',
+            message: `Aluno preferido não encontrado: ${preferredStudentIdentifier}`,
+          });
+          continue;
+        }
+
+        // Check self-preference
+        if (student.id === preferredStudent.id) {
+          errors.push({
+            row: i + 1,
+            field: 'alunoPreferido',
+            message: 'Um aluno não pode escolher a si mesmo',
+          });
+          continue;
+        }
+
+        try {
+          // Check if preference already exists
+          const exists = await studentPreferenceRepository.exists(
+            student.id,
+            preferredStudent.id
+          );
+
+          if (exists && !replaceExisting) {
+            skippedCount++;
+            continue;
+          }
+
+          // Create preference
+          await studentPreferenceRepository.create({
+            studentId: student.id,
+            preferredStudentId: preferredStudent.id,
+            priority: priority as 1 | 2 | 3,
+          });
+
+          successCount++;
+        } catch (error: any) {
+          errors.push({
+            row: i + 1,
+            field: 'general',
+            message: error.message,
+          });
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Importação concluída: ${successCount} preferências criadas`,
+        data: {
+          successCount,
+          errorCount: errors.length,
+          skippedCount,
+          errors: errors.slice(0, 50), // Limit to first 50 errors
+        },
+      });
+    } catch (error: any) {
+      console.error('Error importing preferences:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro ao importar preferências',
+        error: error.message,
+      });
+    }
+  }
 }
 
 export const studentPreferenceController = new StudentPreferenceController();

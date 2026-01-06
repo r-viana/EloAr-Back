@@ -31,6 +31,20 @@ router.get('/student/:studentId', (req, res) => studentPreferenceController.getB
 router.put('/student/:studentId/bulk', (req, res) => studentPreferenceController.bulkUpdate(req, res));
 
 /**
+ * @route   POST /api/v1/student-preferences/import/validate
+ * @desc    Validate CSV import of preferences
+ * @access  Private
+ */
+router.post('/import/validate', (req, res) => studentPreferenceController.validateImport(req, res));
+
+/**
+ * @route   POST /api/v1/student-preferences/import
+ * @desc    Import preferences from CSV
+ * @access  Private
+ */
+router.post('/import', (req, res) => studentPreferenceController.import(req, res));
+
+/**
  * @route   GET /api/v1/student-preferences/:id
  * @desc    Get preference by ID
  * @access  Private
